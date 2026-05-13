@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HRIS - HR Management System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 HRIS - HR Management System</h1>
+        
+        <div class="tabs">
+            <button class="tab active" data-tab="dashboard">Dashboard</button>
+            <button class="tab" data-tab="employees">Employees</button>
+            <button class="tab" data-tab="departments">Departments</button>
+            <button class="tab" data-tab="attendance">Attendance</button>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="tab-content active">
+            <h2>Dashboard Summary</h2>
+            <div id="dashboard-stats" class="stats-grid"></div>
+        </div>
+
+        <!-- Employees -->
+        <div id="employees" class="tab-content">
+            <h2>Employee Management</h2>
+            <button class="btn btn-primary" onclick="showEmployeeForm()">+ Add Employee</button>
+            <div id="employee-list" class="data-list"></div>
+            
+            <div id="employee-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeModal('employee-modal')">&times;</span>
+                    <h3 id="employee-form-title">Add Employee</h3>
+                    <form id="employee-form" onsubmit="saveEmployee(event)">
+                        <input type="hidden" id="emp-id">
+                        <h4>Basic Info</h4>
+                        <input type="text" id="emp-code" placeholder="Employee Code *" required>
+                        <input type="text" id="emp-name" placeholder="Name *" required>
+                        <input type="text" id="emp-job" placeholder="Job Title">
+                        <input type="text" id="emp-position" placeholder="Job Position">
+                        <input type="email" id="emp-email" placeholder="Work Email">
+                        <input type="text" id="emp-phone" placeholder="Work Phone">
+                        <input type="text" id="emp-mobile" placeholder="Work Mobile">
+                        <select id="emp-type" required>
+                            <option value="">Select Type *</option>
+                            <option value="FULL_TIME">Full Time</option>
+                            <option value="PART_TIME">Part Time</option>
+                            <option value="CONTRACT">Contract</option>
+                        </select>
+                        <select id="emp-status" required>
+                            <option value="">Select Status *</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="RESIGNED">Resigned</option>
+                            <option value="TERMINATED">Terminated</option>
+                        </select>
+                        <input type="date" id="emp-join" placeholder="Join Date" required>
+                        <input type="number" id="emp-monthly-cost" placeholder="Monthly Cost" step="0.01">
+                        <select id="emp-related-user">
+                            <option value="">Select Related User</option>
+                        </select>
+                        <select id="emp-dept">
+                            <option value="">Select Department</option>
+                        </select>
+                        <select id="emp-manager">
+                            <option value="">Select Manager</option>
+                        </select>
+                        <select id="emp-coach">
+                            <option value="">Select Coach</option>
+                        </select>
+                        <input type="file" id="emp-photo" accept="image/*">
+                        <small>Upload Photo</small>
+                        <input type="file" id="emp-contract-file" accept=".pdf,.doc,.docx">
+                        <small>Upload Contract Document</small>
+                        
+                        <h4>Private Contact</h4>
+                        <input type="text" id="emp-private-address" placeholder="Private Address">
+                        <input type="email" id="emp-private-email" placeholder="Private Email">
+                        <input type="text" id="emp-private-phone" placeholder="Private Phone">
+                        <input type="text" id="emp-bank" placeholder="Bank Name">
+                        <input type="text" id="emp-account" placeholder="Account Number">
+                        <input type="file" id="emp-bankbook-file" accept="image/*,.pdf">
+                        <small>Upload Bank Book</small>
+                        <input type="number" id="emp-distance" placeholder="Home to Work Distance (km)" step="0.1">
+                        <input type="text" id="emp-bpjs" placeholder="BPJS ID">
+                        <input type="file" id="emp-bpjs-file" accept="image/*,.pdf">
+                        <small>Upload BPJS Card</small>
+                        
+                        <h4>Citizenship</h4>
+                        <input type="text" id="emp-nationality" placeholder="Nationality">
+                        <input type="text" id="emp-id-number" placeholder="ID Number (KTP)">
+                        <input type="file" id="emp-ktp-file" accept="image/*,.pdf">
+                        <small>Upload KTP</small>
+                        <input type="file" id="emp-familycard-file" accept="image/*,.pdf">
+                        <small>Upload Family Card (KK)</small>
+                        <input type="text" id="emp-passport" placeholder="Passport Number">
+                        <input type="file" id="emp-passport-file" accept="image/*,.pdf">
+                        <small>Upload Passport</small>
+                        <select id="emp-gender">
+                            <option value="">Select Gender</option>
+                            <option value="MALE">Male</option>
+                            <option value="FEMALE">Female</option>
+                        </select>
+                        <input type="date" id="emp-dob" placeholder="Date of Birth">
+                        <input type="text" id="emp-pob" placeholder="Place of Birth">
+                        <input type="text" id="emp-cob" placeholder="Country of Birth">
+                        
+                        <h4>Emergency Contact</h4>
+                        <input type="text" id="emp-emergency-name" placeholder="Emergency Contact Name">
+                        <input type="text" id="emp-emergency-phone" placeholder="Emergency Contact Phone">
+                        
+                        <h4>Education</h4>
+                        <select id="emp-cert-level">
+                            <option value="">Certificate Level</option>
+                            <option value="HIGH_SCHOOL">High School</option>
+                            <option value="DIPLOMA">Diploma</option>
+                            <option value="BACHELOR">Bachelor</option>
+                            <option value="MASTER">Master</option>
+                            <option value="DOCTORATE">Doctorate</option>
+                        </select>
+                        <input type="text" id="emp-field" placeholder="Field of Study">
+                        <input type="text" id="emp-school" placeholder="School">
+                        <input type="file" id="emp-certificate-file" accept="image/*,.pdf">
+                        <small>Upload Certificate/Ijazah</small>
+                        <input type="file" id="emp-transcript-file" accept="image/*,.pdf">
+                        <small>Upload Transcript</small>
+                        
+                        <h4>Family Status</h4>
+                        <select id="emp-marital">
+                            <option value="">Marital Status</option>
+                            <option value="SINGLE">Single</option>
+                            <option value="MARRIED">Married</option>
+                            <option value="DIVORCED">Divorced</option>
+                            <option value="WIDOWED">Widowed</option>
+                        </select>
+                        <input type="file" id="emp-marriage-file" accept="image/*,.pdf">
+                        <small>Upload Marriage Certificate</small>
+                        <input type="number" id="emp-children" placeholder="Number of Children" min="0">
+                        <input type="file" id="emp-child-file" accept="image/*,.pdf">
+                        <small>Upload Child Birth Certificate</small>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal('employee-modal')">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="employee-detail-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeModal('employee-detail-modal')">&times;</span>
+                    <h3>Employee Details</h3>
+                    <div id="employee-detail-content"></div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('employee-detail-modal')">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Departments -->
+        <div id="departments" class="tab-content">
+            <h2>Department Management</h2>
+            <button class="btn btn-primary" onclick="showDepartmentForm()">+ Add Department</button>
+            <div id="department-list" class="data-list"></div>
+            
+            <div id="department-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeModal('department-modal')">&times;</span>
+                    <h3 id="department-form-title">Add Department</h3>
+                    <form id="department-form" onsubmit="saveDepartment(event)">
+                        <input type="hidden" id="dept-id">
+                        <input type="text" id="dept-name" placeholder="Department Name *" required>
+                        <select id="dept-manager">
+                            <option value="">Select Manager</option>
+                        </select>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal('department-modal')">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance -->
+        <div id="attendance" class="tab-content">
+            <h2>Attendance Management</h2>
+            <div class="attendance-actions">
+                <select id="att-employee">
+                    <option value="">Select Employee</option>
+                </select>
+                <button class="btn btn-success" onclick="checkIn()">Check In</button>
+                <button class="btn btn-warning" onclick="checkOut()">Check Out</button>
+            </div>
+            
+            <h3>Attendance Report</h3>
+            <div class="filter-section">
+                <input type="date" id="filter-from">
+                <input type="date" id="filter-to">
+                <select id="filter-emp">
+                    <option value="">All Employees</option>
+                </select>
+                <button class="btn btn-primary" onclick="filterAttendance()">Filter</button>
+                <button class="btn btn-secondary" onclick="resetFilter()">Reset</button>
+            </div>
+            <div id="attendance-list" class="data-list"></div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <script src="app.js"></script>
+</body>
+</html>
