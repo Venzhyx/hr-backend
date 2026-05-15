@@ -10,6 +10,7 @@ import com.projek.hr_backend.repository.AttendanceSettingsRepository;
 import com.projek.hr_backend.repository.EmployeeSettingsRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,7 +39,9 @@ public class CheckInService {
     private final LocationValidationService locationValidationService;
     private final FakeGPSDetectionService fakeGPSDetectionService;
 
-    private static final String UPLOAD_DIR = "/app/uploads/attendance/";
+    @Value("${file.upload-dir}")
+    private String baseUploadDir;
+
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     @Transactional
@@ -225,7 +228,6 @@ public class CheckInService {
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
         }
-        // Ambil IP pertama jika ada multiple
         if (ip != null && ip.contains(",")) {
             ip = ip.split(",")[0].trim();
         }
@@ -233,11 +235,28 @@ public class CheckInService {
     }
 
     private String savePhoto(MultipartFile photo, Long employeeId, String type) throws IOException {
-        File uploadDir = new File(UPLOAD_DIR);
-        if (!uploadDir.exists()) uploadDir.mkdirs();
+        // Ambil path dari config, fallback ke folder relatif jika null
+        String uploadPath = (baseUploadDir != null && !baseUploadDir.isBlank())
+                ? baseUploadDir + File.separator + "attendance"
+                : "uploads" + File.separator + "attendance";
+
+        File uploadDir = new File(uploadPath);
+        if (!uploadDir.exists()) {
+            boolean created = uploadDir.mkdirs();
+            if (!created) {
+                throw new IOException("Gagal membuat folder upload: " + uploadDir.getAbsolutePath());
+            }
+        }
+
+        System.out.println("[savePhoto] Upload dir: " + uploadDir.getAbsolutePath());
+        System.out.println("[savePhoto] File size: " + photo.getSize() + " bytes");
+
         String fileName = System.currentTimeMillis() + "_" + employeeId + "_" + type + ".jpg";
-        Path filePath = Paths.get(UPLOAD_DIR + fileName);
+        Path filePath = Paths.get(uploadPath, fileName);
         Files.write(filePath, photo.getBytes());
-        return UPLOAD_DIR + fileName;
+
+        System.out.println("[savePhoto] Saved to: " + filePath.toAbsolutePath());
+
+        return filePath.toString();
     }
 }

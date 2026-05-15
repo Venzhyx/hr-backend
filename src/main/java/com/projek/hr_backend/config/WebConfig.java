@@ -20,7 +20,7 @@ public class WebConfig implements WebMvcConfigurer {
         config.addAllowedOriginPattern("http://localhost:3000");
         config.addAllowedOriginPattern("http://127.0.0.1:3000");
         config.addAllowedOriginPattern("http://172.16.17.88:3000");
-        config.addAllowedOriginPattern("http://10.128.6.107:3000");
+        config.addAllowedOriginPattern("http://10.128.9.88:3000");
         config.addAllowedOriginPattern("https://hr-management.democoncept.id");
 
         config.addAllowedHeader("*");

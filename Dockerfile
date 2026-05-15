@@ -17,4 +17,9 @@ COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java","-jar","app.jar"]
+ENTRYPOINT ["java", \
+  "-Dspring.servlet.multipart.max-file-size=-1", \
+  "-Dspring.servlet.multipart.max-request-size=-1", \
+  "-Dserver.tomcat.max-swallow-size=-1", \
+  "-Dserver.tomcat.max-http-form-post-size=-1", \
+  "-jar", "app.jar"]
