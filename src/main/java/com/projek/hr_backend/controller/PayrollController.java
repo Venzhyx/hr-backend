@@ -31,7 +31,6 @@ public class PayrollController {
 
     // ─── Salary Component ─────────────────────────────────────────────────────
 
-    /** POST /api/payroll/components — Buat salary component baru */
     @PostMapping("/components")
     public ResponseEntity<ApiResponse<SalaryComponentResponse>> createComponent(
             @Valid @RequestBody SalaryComponentRequest request) {
@@ -40,7 +39,6 @@ public class PayrollController {
                         salaryComponentService.create(request)));
     }
 
-    /** GET /api/payroll/components — Semua komponen (?activeOnly=true untuk aktif saja) */
     @GetMapping("/components")
     public ResponseEntity<ApiResponse<List<SalaryComponentResponse>>> getAllComponents(
             @RequestParam(defaultValue = "false") boolean activeOnly) {
@@ -50,7 +48,6 @@ public class PayrollController {
         return ResponseEntity.ok(ApiResponse.success("Salary components retrieved successfully", data));
     }
 
-    /** PUT /api/payroll/components/{id} — Update salary component */
     @PutMapping("/components/{id}")
     public ResponseEntity<ApiResponse<SalaryComponentResponse>> updateComponent(
             @PathVariable Long id,
@@ -59,7 +56,6 @@ public class PayrollController {
                 salaryComponentService.update(id, request)));
     }
 
-    /** DELETE /api/payroll/components/{id} — Deactivate salary component (soft delete) */
     @DeleteMapping("/components/{id}")
     public ResponseEntity<ApiResponse<Void>> deactivateComponent(@PathVariable Long id) {
         salaryComponentService.deactivate(id);
@@ -68,7 +64,6 @@ public class PayrollController {
 
     // ─── Employee Salary ──────────────────────────────────────────────────────
 
-    /** POST /api/payroll/employee-salary — Set gaji pokok employee */
     @PostMapping("/employee-salary")
     public ResponseEntity<ApiResponse<EmployeeSalaryResponse>> setEmployeeSalary(
             @Valid @RequestBody EmployeeSalaryRequest request) {
@@ -77,7 +72,6 @@ public class PayrollController {
                         employeeSalaryService.setBasicSalary(request)));
     }
 
-    /** POST /api/payroll/employee-salary/{id}/components — Tambah komponen ke salary */
     @PostMapping("/employee-salary/{id}/components")
     public ResponseEntity<ApiResponse<EmployeeSalaryResponse>> addSalaryComponent(
             @PathVariable Long id,
@@ -87,7 +81,6 @@ public class PayrollController {
                         employeeSalaryService.addComponent(id, request)));
     }
 
-    /** GET /api/payroll/employee-salary/{employeeId} — Detail salary aktif employee */
     @GetMapping("/employee-salary/{employeeId}")
     public ResponseEntity<ApiResponse<EmployeeSalaryResponse>> getEmployeeSalary(
             @PathVariable Long employeeId) {
@@ -95,7 +88,6 @@ public class PayrollController {
                 employeeSalaryService.getSalaryDetail(employeeId)));
     }
 
-    /** GET /api/payroll/employee-salary/{employeeId}/history — Riwayat salary employee */
     @GetMapping("/employee-salary/{employeeId}/history")
     public ResponseEntity<ApiResponse<List<EmployeeSalaryResponse>>> getEmployeeSalaryHistory(
             @PathVariable Long employeeId) {
@@ -105,10 +97,6 @@ public class PayrollController {
 
     // ─── Payroll Run ──────────────────────────────────────────────────────────
 
-    /**
-     * POST /api/payroll/run
-     * Jalankan payroll untuk bulan dan tahun tertentu.
-     */
     @PostMapping("/run")
     public ResponseEntity<ApiResponse<PayrollPeriodResponse>> runPayroll(
             @Valid @RequestBody PayrollRunRequest request) {
@@ -119,21 +107,12 @@ public class PayrollController {
                         + " payslip(s) for " + response.getPeriodLabel(), response));
     }
 
-    /**
-     * GET /api/payroll/runs
-     * Ambil semua payroll period yang pernah di-run, diurutkan terbaru dulu.
-     * Dipakai FE untuk menampilkan daftar payroll di IndexPayroll.
-     */
     @GetMapping("/runs")
     public ResponseEntity<ApiResponse<List<PayrollPeriodResponse>>> getAllPayrollRuns() {
         List<PayrollPeriodResponse> response = payrollRunService.getAllRuns();
         return ResponseEntity.ok(ApiResponse.success("Payroll runs retrieved successfully", response));
     }
 
-    /**
-     * GET /api/payroll/runs/{periodId}
-     * Ambil detail satu payroll period beserta semua payslip-nya.
-     */
     @GetMapping("/runs/{periodId}")
     public ResponseEntity<ApiResponse<PayrollPeriodResponse>> getPayrollRunDetail(
             @PathVariable Long periodId) {
@@ -141,9 +120,22 @@ public class PayrollController {
         return ResponseEntity.ok(ApiResponse.success("Payroll run detail retrieved successfully", response));
     }
 
+    /**
+     * DELETE /api/payroll/runs?month=4&year=2026
+     * Hapus payroll period beserta semua payslip-nya.
+     * Hanya boleh jika status period masih DRAFT.
+     * Dipakai untuk generate ulang payroll di periode yang sama.
+     */
+    @DeleteMapping("/runs")
+    public ResponseEntity<ApiResponse<Void>> deletePayrollRun(
+            @RequestParam @Min(1) @Max(12) int month,
+            @RequestParam @Min(2000) int year) {
+        payrollRunService.deleteRun(month, year);
+        return ResponseEntity.ok(ApiResponse.success("Payroll run deleted successfully", null));
+    }
+
     // ─── Payslip ──────────────────────────────────────────────────────────────
 
-    /** GET /api/payroll/payslips/{employeeId} — Semua payslip milik satu employee */
     @GetMapping("/payslips/{employeeId}")
     public ResponseEntity<ApiResponse<List<PayslipResponse>>> getPayslipsByEmployee(
             @PathVariable Long employeeId) {
@@ -151,7 +143,6 @@ public class PayrollController {
                 payslipService.getPayslipsByEmployee(employeeId)));
     }
 
-    /** GET /api/payroll/payslips/detail/{payslipId} — Detail satu payslip lengkap */
     @GetMapping("/payslips/detail/{payslipId}")
     public ResponseEntity<ApiResponse<PayslipResponse>> getPayslipDetail(
             @PathVariable Long payslipId) {
@@ -159,11 +150,6 @@ public class PayrollController {
                 payslipService.getPayslipDetail(payslipId)));
     }
 
-    /**
-     * PATCH /api/payroll/payslips/{payslipId}/approve
-     * Approve payslip — mengubah status period dari DRAFT → FINALIZED.
-     * Hanya DRAFT yang boleh di-approve.
-     */
     @PatchMapping("/payslips/{payslipId}/approve")
     public ResponseEntity<ApiResponse<PayslipResponse>> approvePayslip(
             @PathVariable Long payslipId) {
@@ -171,11 +157,6 @@ public class PayrollController {
                 payslipService.approvePayslip(payslipId)));
     }
 
-    /**
-     * DELETE /api/payroll/payslips/{payslipId}
-     * Hapus payslip — hanya boleh jika status period masih DRAFT.
-     * Hard delete: payslip + semua komponennya dihapus permanen.
-     */
     @DeleteMapping("/payslips/{payslipId}")
     public ResponseEntity<ApiResponse<Void>> deletePayslip(
             @PathVariable Long payslipId) {
@@ -183,11 +164,6 @@ public class PayrollController {
         return ResponseEntity.ok(ApiResponse.success("Payslip deleted successfully", null));
     }
 
-    /**
-     * PATCH /api/payroll/payslips/{payslipId}/paid
-     * Mark payslip as paid — mengubah status period dari FINALIZED → PAID.
-     * Hanya FINALIZED yang boleh di-mark as paid.
-     */
     @PatchMapping("/payslips/{payslipId}/paid")
     public ResponseEntity<ApiResponse<PayslipResponse>> markAsPaid(
             @PathVariable Long payslipId) {
@@ -197,10 +173,6 @@ public class PayrollController {
 
     // ─── Export PDF ───────────────────────────────────────────────────────────
 
-    /**
-     * GET /api/payroll/payslips/{payslipId}/pdf
-     * Export satu payslip sebagai PDF.
-     */
     @GetMapping("/payslips/{payslipId}/pdf")
     public ResponseEntity<byte[]> exportPayslipPdf(@PathVariable Long payslipId) {
         byte[] pdf = payslipPdfService.generatePayslipPdf(payslipId);
@@ -214,11 +186,6 @@ public class PayrollController {
         return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
     }
 
-    /**
-     * GET /api/payroll/reports/pdf?month=4&year=2026
-     * Export semua payslip dalam satu periode — satu file PDF multi-halaman.
-     * Setiap karyawan mendapat 1 halaman.
-     */
     @GetMapping("/reports/pdf")
     public ResponseEntity<byte[]> exportAllPayslipsPdf(
             @RequestParam @Min(1) @Max(12) int month,
@@ -241,11 +208,6 @@ public class PayrollController {
 
     // ─── Export Excel ─────────────────────────────────────────────────────────
 
-    /**
-     * GET /api/payroll/reports/excel?month=4&year=2026
-     * Export payroll report seluruh employee dalam satu periode sebagai Excel.
-     * Data diambil dari snapshot — tidak ada kalkulasi ulang.
-     */
     @GetMapping("/reports/excel")
     public ResponseEntity<byte[]> exportPayrollExcel(
             @RequestParam @Min(1) @Max(12) int month,

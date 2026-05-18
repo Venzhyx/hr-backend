@@ -3,6 +3,7 @@ package com.projek.hr_backend.service;
 import com.projek.hr_backend.dto.PayrollPeriodResponse;
 import com.projek.hr_backend.dto.PayrollRunRequest;
 import com.projek.hr_backend.dto.PayslipResponse;
+import com.projek.hr_backend.exception.BadRequestException;
 import com.projek.hr_backend.exception.DuplicateResourceException;
 import com.projek.hr_backend.exception.ResourceNotFoundException;
 import com.projek.hr_backend.model.*;
@@ -27,7 +28,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PayrollRunService {
 
-    // Rate konstanta — bisa dipindah ke tabel settings nanti
     private static final BigDecimal OVERTIME_RATE_PER_HOUR   = new BigDecimal("25000");
     private static final BigDecimal ABSENT_DEDUCTION_PER_DAY = new BigDecimal("100000");
     private static final BigDecimal LATE_DEDUCTION_PER_DAY   = new BigDecimal("25000");
@@ -43,10 +43,6 @@ public class PayrollRunService {
 
     // ─── Query Runs ───────────────────────────────────────────────────────────
 
-    /**
-     * Ambil semua payroll period, diurutkan terbaru dulu.
-     * Setiap period sudah include semua payslip-nya.
-     */
     @Transactional(readOnly = true)
     public List<PayrollPeriodResponse> getAllRuns() {
         return payrollPeriodRepository
@@ -60,9 +56,6 @@ public class PayrollRunService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Ambil detail satu payroll period beserta semua payslip-nya.
-     */
     @Transactional(readOnly = true)
     public PayrollPeriodResponse getRunDetail(Long periodId) {
         PayrollPeriod period = payrollPeriodRepository.findById(periodId)
@@ -74,6 +67,33 @@ public class PayrollRunService {
                 payslips.size(), payslips.size(), 0, 0);
     }
 
+    // ─── Delete Run ───────────────────────────────────────────────────────────
+
+    /**
+     * Hapus payroll period beserta semua payslip dan komponennya.
+     * Hanya boleh jika status period masih DRAFT.
+     * Dipakai untuk generate ulang payroll di periode yang sama.
+     */
+    @Transactional
+    public void deleteRun(int month, int year) {
+        PayrollPeriod period = payrollPeriodRepository.findByMonthAndYear(month, year)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Payroll period not found for " + buildPeriodLabel(month, year)));
+
+        if (period.getStatus() != PayrollPeriodStatus.DRAFT) {
+            throw new BadRequestException(
+                "Tidak bisa menghapus payroll period berstatus " + period.getStatus().name()
+                + ". Hanya period berstatus DRAFT yang bisa dihapus.");
+        }
+
+        List<Payslip> payslips = payslipRepository.findByPayrollPeriodId(period.getId());
+        payslips.forEach(p -> payslipComponentRepository.deleteByPayslipId(p.getId()));
+        payslipRepository.deleteAll(payslips);
+        payrollPeriodRepository.delete(period);
+
+        log.info("Payroll period deleted: {} (id={})", buildPeriodLabel(month, year), period.getId());
+    }
+
     // ─── Run Payroll ──────────────────────────────────────────────────────────
 
     @Transactional
@@ -81,14 +101,12 @@ public class PayrollRunService {
         int month = request.getMonth();
         int year  = request.getYear();
 
-        // Immutability: periode yang sama tidak boleh di-run dua kali
         if (payrollPeriodRepository.existsByMonthAndYear(month, year)) {
             throw new DuplicateResourceException(
                 "Payroll for " + buildPeriodLabel(month, year) + " has already been run. "
                 + "Payroll is immutable — create a new period or contact administrator.");
         }
 
-        // 1. Buat PayrollPeriod
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate   = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
@@ -102,13 +120,12 @@ public class PayrollRunService {
 
         log.info("Payroll run started for period: {}", buildPeriodLabel(month, year));
 
-        // 2. Ambil semua employee dan proses satu per satu
         List<Employee> employees = employeeRepository.findAll();
         List<Payslip>  generatedPayslips = new ArrayList<>();
 
-        int successCount  = 0;
-        int skippedCount  = 0;
-        int failedCount   = 0;
+        int successCount = 0;
+        int skippedCount = 0;
+        int failedCount  = 0;
 
         for (Employee employee : employees) {
             try {
@@ -116,12 +133,10 @@ public class PayrollRunService {
                 generatedPayslips.add(payslip);
                 successCount++;
             } catch (ResourceNotFoundException ex) {
-                // Tidak punya salary aktif — skip, bukan error
                 skippedCount++;
                 log.warn("SKIPPED employee id={} name='{}': {}",
                     employee.getId(), employee.getName(), ex.getMessage());
             } catch (Exception ex) {
-                // Error tak terduga — catat tapi jangan hentikan proses
                 failedCount++;
                 log.error("FAILED employee id={} name='{}': {}",
                     employee.getId(), employee.getName(), ex.getMessage(), ex);
@@ -140,7 +155,6 @@ public class PayrollRunService {
     private Payslip processEmployeePayroll(Employee employee, PayrollPeriod period,
                                            LocalDate startDate, LocalDate endDate) {
 
-        // A. Ambil EmployeeSalary aktif — wajib ada, kalau tidak ada throw untuk di-skip
         EmployeeSalary employeeSalary = employeeSalaryRepository
                 .findByEmployeeIdAndIsActiveTrue(employee.getId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -148,23 +162,19 @@ public class PayrollRunService {
 
         BigDecimal basicSalary = employeeSalary.getBasicSalary();
 
-        // Ambil komponen salary employee
         List<EmployeeSalaryComponent> salaryComponents =
                 employeeSalaryComponentRepository.findByEmployeeSalaryId(employeeSalary.getId());
 
-        // B. Hitung EARNING dari komponen salary setup
         BigDecimal totalEarning = salaryComponents.stream()
                 .filter(c -> c.getSalaryComponent().getType() == SalaryComponentType.EARNING)
                 .map(EmployeeSalaryComponent::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // C. Hitung DEDUCTION dari komponen salary setup
         BigDecimal totalDeduction = salaryComponents.stream()
                 .filter(c -> c.getSalaryComponent().getType() == SalaryComponentType.DEDUCTION)
                 .map(EmployeeSalaryComponent::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // D. Hitung OVERTIME — hanya status APPROVED dalam periode ini
         Double rawOvertimeHours = overtimeRepository
                 .getTotalApprovedHoursByEmployeeAndMonth(
                     employee.getId(), period.getMonth(), period.getYear());
@@ -172,7 +182,6 @@ public class PayrollRunService {
         BigDecimal overtimePay = OVERTIME_RATE_PER_HOUR
                 .multiply(BigDecimal.valueOf(totalOvertimeHours));
 
-        // E. Hitung potongan ABSENT dan LATE dari attendance dalam periode
         long absentCount = attendanceRepository.countByEmployeeIdAndStatusAndDateBetween(
                 employee.getId(), "ABSENT", startDate, endDate);
         long lateCount   = attendanceRepository.countByEmployeeIdAndStatusAndDateBetween(
@@ -182,14 +191,11 @@ public class PayrollRunService {
         BigDecimal lateDeduction   = LATE_DEDUCTION_PER_DAY.multiply(BigDecimal.valueOf(lateCount));
         totalDeduction = totalDeduction.add(absentDeduction).add(lateDeduction);
 
-        // F. Hitung NET SALARY
-        // netSalary = basicSalary + totalEarning + overtimePay - totalDeduction
         BigDecimal netSalary = basicSalary
                 .add(totalEarning)
                 .add(overtimePay)
                 .subtract(totalDeduction);
 
-        // G. Simpan Payslip — immutable, semua field updatable=false di entity
         Payslip payslip = new Payslip();
         payslip.setPayrollPeriod(period);
         payslip.setEmployee(employee);
@@ -204,10 +210,8 @@ public class PayrollRunService {
         payslip.setStatus(PayslipStatus.DRAFT);
         payslip = payslipRepository.save(payslip);
 
-        // H. Simpan PayslipComponent — snapshot permanen semua rincian
         List<PayslipComponent> components = new ArrayList<>();
 
-        // Earning dari salary setup
         for (EmployeeSalaryComponent sc : salaryComponents) {
             if (sc.getSalaryComponent().getType() == SalaryComponentType.EARNING) {
                 components.add(buildComponent(payslip,
@@ -217,7 +221,6 @@ public class PayrollRunService {
             }
         }
 
-        // Deduction dari salary setup
         for (EmployeeSalaryComponent sc : salaryComponents) {
             if (sc.getSalaryComponent().getType() == SalaryComponentType.DEDUCTION) {
                 components.add(buildComponent(payslip,
@@ -227,7 +230,6 @@ public class PayrollRunService {
             }
         }
 
-        // Overtime pay sebagai komponen earning (hanya jika ada)
         if (overtimePay.compareTo(BigDecimal.ZERO) > 0) {
             components.add(buildComponent(payslip,
                 "Overtime Pay (" + String.format("%.1f", totalOvertimeHours) + " hrs)",
@@ -235,7 +237,6 @@ public class PayrollRunService {
                 overtimePay));
         }
 
-        // Potongan absen (hanya jika ada)
         if (absentDeduction.compareTo(BigDecimal.ZERO) > 0) {
             components.add(buildComponent(payslip,
                 "Absent Deduction (" + absentCount + " day(s))",
@@ -243,7 +244,6 @@ public class PayrollRunService {
                 absentDeduction));
         }
 
-        // Potongan telat (hanya jika ada)
         if (lateDeduction.compareTo(BigDecimal.ZERO) > 0) {
             components.add(buildComponent(payslip,
                 "Late Deduction (" + lateCount + " day(s))",
@@ -294,7 +294,7 @@ public class PayrollRunService {
         response.setSuccessCount(successCount);
         response.setSkippedCount(skippedCount);
         response.setFailedCount(failedCount);
-        response.setTotalPayslips(successCount);   // backward compat
+        response.setTotalPayslips(successCount);
         response.setPayslips(payslipResponses);
         response.setCreatedAt(period.getCreatedAt());
         response.setUpdatedAt(period.getUpdatedAt());
@@ -316,7 +316,6 @@ public class PayrollRunService {
             p.getPayrollPeriod().getMonth(), p.getPayrollPeriod().getYear()));
         response.setMonth(p.getPayrollPeriod().getMonth());
         response.setYear(p.getPayrollPeriod().getYear());
-        // Status per-payslip — diambil dari field status payslip itu sendiri
         response.setStatus(p.getStatus());
         response.setBasicSalary(p.getBasicSalary());
         response.setOvertimePay(p.getOvertimePay());
