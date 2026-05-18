@@ -28,9 +28,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PayrollRunService {
 
-    private static final BigDecimal OVERTIME_RATE_PER_HOUR   = new BigDecimal("25000");
-    private static final BigDecimal ABSENT_DEDUCTION_PER_DAY = new BigDecimal("100000");
-    private static final BigDecimal LATE_DEDUCTION_PER_DAY   = new BigDecimal("25000");
+    private static final BigDecimal OVERTIME_RATE_PER_HOUR = new BigDecimal("25000");
 
     private final PayrollPeriodRepository           payrollPeriodRepository;
     private final PayslipRepository                 payslipRepository;
@@ -40,6 +38,7 @@ public class PayrollRunService {
     private final EmployeeSalaryComponentRepository employeeSalaryComponentRepository;
     private final OvertimeRepository                overtimeRepository;
     private final AttendanceRepository              attendanceRepository;
+    private final PayrollSettingService             payrollSettingService;
 
     // ─── Query Runs ───────────────────────────────────────────────────────────
 
@@ -187,8 +186,14 @@ public class PayrollRunService {
         long lateCount   = attendanceRepository.countByEmployeeIdAndStatusAndDateBetween(
                 employee.getId(), "LATE", startDate, endDate);
 
-        BigDecimal absentDeduction = ABSENT_DEDUCTION_PER_DAY.multiply(BigDecimal.valueOf(absentCount));
-        BigDecimal lateDeduction   = LATE_DEDUCTION_PER_DAY.multiply(BigDecimal.valueOf(lateCount));
+        // Baca rate dari DB (payroll_settings), fallback ke default jika belum ada
+        BigDecimal absentRatePerDay = payrollSettingService.getValue(
+                PayrollSettingService.KEY_ABSENT_DEDUCTION, new BigDecimal("100000"));
+        BigDecimal lateRatePerDay   = payrollSettingService.getValue(
+                PayrollSettingService.KEY_LATE_DEDUCTION,   new BigDecimal("25000"));
+
+        BigDecimal absentDeduction = absentRatePerDay.multiply(BigDecimal.valueOf(absentCount));
+        BigDecimal lateDeduction   = lateRatePerDay.multiply(BigDecimal.valueOf(lateCount));
         totalDeduction = totalDeduction.add(absentDeduction).add(lateDeduction);
 
         BigDecimal netSalary = basicSalary

@@ -28,6 +28,7 @@ public class PayrollController {
     private final PayslipService              payslipService;
     private final PayslipPdfService           payslipPdfService;
     private final PayrollReportExcelService   payrollReportExcelService;
+    private final PayrollSettingService       payrollSettingService;
 
     // ─── Salary Component ─────────────────────────────────────────────────────
 
@@ -204,6 +205,23 @@ public class PayrollController {
         headers.setContentLength(pdf.length);
 
         return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
+    }
+
+    // ─── Payroll Settings ─────────────────────────────────────────────────────
+
+    @GetMapping("/settings")
+    public ResponseEntity<ApiResponse<PayrollSettingResponse>> getSettings() {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Payroll settings retrieved successfully",
+                payrollSettingService.getSettings()));
+    }
+
+    @PutMapping("/settings")
+    public ResponseEntity<ApiResponse<PayrollSettingResponse>> updateSettings(
+            @Valid @RequestBody PayrollSettingRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Payroll settings updated successfully",
+                payrollSettingService.updateSettings(request)));
     }
 
     // ─── Export Excel ─────────────────────────────────────────────────────────
