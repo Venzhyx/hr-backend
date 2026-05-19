@@ -1,5 +1,6 @@
 package com.projek.hr_backend.service;
 
+import com.projek.hr_backend.model.AttendanceMode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -11,13 +12,23 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class AttendanceScheduler {
 
-    private final AttendanceService attendanceService;
+    private final AttendanceService         attendanceService;
+    private final AttendanceSettingsService attendanceSettingsService;
 
     private static final String SCAN_FOLDER      = "/app/attendance";
     private static final String PROCESSED_FOLDER = "/app/attendance/processed";
 
     @Scheduled(fixedRate = 60000)
     public void processAttendanceFiles() {
+
+        // Guard: scheduler hanya aktif kalau mode OFFLINE.
+        // Kalau ONLINE, karyawan absen sendiri via app — file mesin diabaikan.
+        AttendanceMode mode = attendanceSettingsService.getMode();
+        if (mode == AttendanceMode.ONLINE) {
+            System.out.println("[Scheduler] Mode ONLINE — skip pemrosesan file mesin.");
+            return;
+        }
+
         File scanDir = new File(SCAN_FOLDER);
 
         if (!scanDir.exists() || !scanDir.isDirectory()) {

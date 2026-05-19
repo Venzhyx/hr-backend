@@ -45,7 +45,17 @@ public class AttendanceSettings {
 
     @Column(name = "wfh_radius")
     private Integer wfhRadius = 100;
-    
+
+    /**
+     * Mode operasi absensi.
+     * ONLINE  → karyawan absen via aplikasi (check-in/out aktif, scheduler skip).
+     * OFFLINE → absensi dari mesin/Excel (check-in/out diblokir, scheduler aktif).
+     * Default OFFLINE agar tidak breaking existing behavior.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mode", nullable = false, length = 10)
+    private AttendanceMode mode = AttendanceMode.OFFLINE;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

@@ -38,6 +38,7 @@ public class CheckInService {
     private final AttendanceSettingsRepository attendanceSettingsRepository;
     private final LocationValidationService locationValidationService;
     private final FakeGPSDetectionService fakeGPSDetectionService;
+    private final AttendanceSettingsService attendanceSettingsService;
 
     @Value("${file.upload-dir}")
     private String baseUploadDir;
@@ -49,6 +50,13 @@ public class CheckInService {
                                    Double latitude, Double longitude,
                                    String attendanceType, Double gpsAccuracy,
                                    String deviceInfo, HttpServletRequest httpRequest) throws IOException {
+
+        // 0. Guard: hanya bisa check-in kalau mode ONLINE
+        if (attendanceSettingsService.getMode() != AttendanceMode.ONLINE) {
+            throw new IllegalStateException(
+                "Check-in tidak tersedia. Mode absensi saat ini adalah OFFLINE " +
+                "(absensi dikelola oleh mesin). Hubungi HR untuk mengubah mode.");
+        }
 
         // 1. Cari employee via settings
         EmployeeSettings settings = employeeSettingsRepository.findByEmployeeId(employeeId)
@@ -173,6 +181,13 @@ public class CheckInService {
     @Transactional
     public CheckOutResponse checkOut(Long employeeId, MultipartFile photo,
                                      Double latitude, Double longitude) throws IOException {
+
+        // 0. Guard: hanya bisa check-out kalau mode ONLINE
+        if (attendanceSettingsService.getMode() != AttendanceMode.ONLINE) {
+            throw new IllegalStateException(
+                "Check-out tidak tersedia. Mode absensi saat ini adalah OFFLINE " +
+                "(absensi dikelola oleh mesin). Hubungi HR untuk mengubah mode.");
+        }
 
         EmployeeSettings settings = employeeSettingsRepository.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + employeeId));

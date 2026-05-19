@@ -1,5 +1,6 @@
 package com.projek.hr_backend.dto;
 
+import com.projek.hr_backend.model.AttendanceMode;
 import com.projek.hr_backend.model.ExtraHoursValidation;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,6 +22,8 @@ public class AttendanceSettingsResponse {
     private Double officeLongitude;
     private Integer wfoRadius;
     private Integer wfhRadius;
+    /** ONLINE = absen via app, OFFLINE = absen via mesin/Excel. */
+    private AttendanceMode mode;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
