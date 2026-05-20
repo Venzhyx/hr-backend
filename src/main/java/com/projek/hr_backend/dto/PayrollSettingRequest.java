@@ -1,7 +1,7 @@
 package com.projek.hr_backend.dto;
 
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,18 +14,18 @@ import java.math.BigDecimal;
 public class PayrollSettingRequest {
 
     @NotNull(message = "Absent deduction per day is required")
-    @Positive(message = "Absent deduction per day must be greater than 0")
+    @PositiveOrZero(message = "Absent deduction per day must be 0 or greater")
     private BigDecimal absentDeductionPerDay;
 
     @NotNull(message = "Late deduction per day is required")
-    @Positive(message = "Late deduction per day must be greater than 0")
+    @PositiveOrZero(message = "Late deduction per day must be 0 or greater")
     private BigDecimal lateDeductionPerDay;
 
     @NotNull(message = "Overtime rate per occurrence is required")
-    @Positive(message = "Overtime rate per occurrence must be greater than 0")
+    @PositiveOrZero(message = "Overtime rate per occurrence must be 0 or greater")
     private BigDecimal overtimeRatePerOccurrence;
 
     @NotNull(message = "Overtime rate per hour is required")
-    @Positive(message = "Overtime rate per hour must be greater than 0")
+    @PositiveOrZero(message = "Overtime rate per hour must be 0 or greater")
     private BigDecimal overtimeRatePerHour;
 }

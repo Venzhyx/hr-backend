@@ -176,7 +176,7 @@ public class PayrollRunService {
                 .getTotalApprovedHoursByEmployeeAndMonth(
                     employee.getId(), period.getMonth(), period.getYear());
         double totalOvertimeHours = rawOvertimeHours != null
-                ? Math.round(rawOvertimeHours * 100.0) / 100.0
+                ? Math.round(rawOvertimeHours * 10.0) / 10.0
                 : 0.0;
 
         // Jumlah sesi lembur APPROVED (untuk flat rate per occurrence)
@@ -184,7 +184,7 @@ public class PayrollRunService {
                 .countApprovedSessionsByEmployeeAndMonth(
                     employee.getId(), period.getMonth(), period.getYear());
 
-        // Baca rate overtime dari DB
+        // Baca rate overtime dari payslip.setTotalEarning(totalEarning);
         BigDecimal overtimeRateOccurrence = payrollSettingService.getValue(
                 PayrollSettingService.KEY_OVERTIME_RATE_OCCURRENCE, new BigDecimal("50000"));
         BigDecimal overtimeRateHour = payrollSettingService.getValue(
@@ -219,7 +219,7 @@ public class PayrollRunService {
         payslip.setPayrollPeriod(period);
         payslip.setEmployee(employee);
         payslip.setBasicSalary(basicSalary);
-        payslip.setTotalEarning(totalEarning);
+        payslip.setTotalEarning(totalEarning.add(overtimePay));
         payslip.setTotalDeduction(totalDeduction);
         payslip.setOvertimePay(overtimePay);
         payslip.setTotalOvertimeHours(totalOvertimeHours);
