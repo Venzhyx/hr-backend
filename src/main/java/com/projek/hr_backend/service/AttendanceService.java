@@ -148,4 +148,8 @@ public class AttendanceService {
     public List<Attendance> getAttendancesByEmployee(Long employeeId) {
         return attendanceRepository.findByEmployeeId(employeeId);
     }
+
+    public List<Attendance> getAttendancesByDate(LocalDate date) {
+        return attendanceRepository.findByDate(date);
+    }
 }

@@ -16,6 +16,9 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     boolean existsByEmployeeIdAndDate(Long employeeId, LocalDate date);
     Optional<Attendance> findByEmployeeIdAndDate(Long employeeId, LocalDate date);
 
+    /** Ambil semua attendance berdasarkan tanggal tertentu. */
+    List<Attendance> findByDate(LocalDate date);
+
     /** Ambil semua attendance employee dalam rentang tanggal periode payroll. */
     @Query("SELECT a FROM Attendance a WHERE a.employee.id = :employeeId AND a.date BETWEEN :startDate AND :endDate")
     List<Attendance> findByEmployeeIdAndDateBetween(

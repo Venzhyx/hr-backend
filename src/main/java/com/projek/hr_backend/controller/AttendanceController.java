@@ -13,11 +13,13 @@ import com.projek.hr_backend.service.AttendanceService;
 import com.projek.hr_backend.service.CheckInService;
 import com.projek.hr_backend.service.LocationValidationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +83,13 @@ public class AttendanceController {
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAttendancesByEmployee(
             @PathVariable Long id) {
         List<Attendance> attendances = service.getAttendancesByEmployee(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Attendances retrieved successfully", toDto(attendances)));
+    }
+
+    @GetMapping("/date/{date}")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAttendancesByDate(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        List<Attendance> attendances = service.getAttendancesByDate(date);
         return ResponseEntity.ok(new ApiResponse<>(true, "Attendances retrieved successfully", toDto(attendances)));
     }
 
