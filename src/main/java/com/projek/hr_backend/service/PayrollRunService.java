@@ -177,7 +177,9 @@ public class PayrollRunService {
         Double rawOvertimeHours = overtimeRepository
                 .getTotalApprovedHoursByEmployeeAndMonth(
                     employee.getId(), period.getMonth(), period.getYear());
-        double totalOvertimeHours = rawOvertimeHours != null ? rawOvertimeHours : 0.0;
+        double totalOvertimeHours = rawOvertimeHours != null
+        ? Math.round(rawOvertimeHours * 100.0) / 100.0
+        : 0.0;
         BigDecimal overtimePay = OVERTIME_RATE_PER_HOUR
                 .multiply(BigDecimal.valueOf(totalOvertimeHours));
 
