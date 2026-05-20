@@ -21,5 +21,16 @@ public interface OvertimeRepository extends JpaRepository<Overtime, Long> {
            "AND YEAR(o.date) = :year")
     Double getTotalApprovedHoursByEmployeeAndMonth(Long employeeId, int month, int year);
 
+    /**
+     * Hitung jumlah sesi (entri) lembur APPROVED dalam satu bulan.
+     * Dipakai untuk kalkulasi overtimeRatePerOccurrence di payroll run.
+     */
+    @Query("SELECT COUNT(o) FROM Overtime o " +
+           "WHERE o.employee.id = :employeeId " +
+           "AND o.status = 'APPROVED' " +
+           "AND MONTH(o.date) = :month " +
+           "AND YEAR(o.date) = :year")
+    long countApprovedSessionsByEmployeeAndMonth(Long employeeId, int month, int year);
+
     boolean existsByEmployeeIdAndDateAndStatusNot(Long employeeId, LocalDate date, ApprovalStatus status);
 }

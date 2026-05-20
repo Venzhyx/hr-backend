@@ -21,11 +21,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PayrollSettingService {
 
-    public static final String KEY_ABSENT_DEDUCTION = "ABSENT_DEDUCTION_PER_DAY";
-    public static final String KEY_LATE_DEDUCTION   = "LATE_DEDUCTION_PER_DAY";
+    // ─── Keys ─────────────────────────────────────────────────────────────────
 
-    private static final BigDecimal DEFAULT_ABSENT_DEDUCTION = new BigDecimal("100000");
-    private static final BigDecimal DEFAULT_LATE_DEDUCTION   = new BigDecimal("25000");
+    public static final String KEY_ABSENT_DEDUCTION       = "ABSENT_DEDUCTION_PER_DAY";
+    public static final String KEY_LATE_DEDUCTION         = "LATE_DEDUCTION_PER_DAY";
+    public static final String KEY_OVERTIME_RATE_OCCURRENCE = "OVERTIME_RATE_PER_OCCURRENCE";
+    public static final String KEY_OVERTIME_RATE_HOUR       = "OVERTIME_RATE_PER_HOUR";
+
+    // ─── Defaults ─────────────────────────────────────────────────────────────
+
+    private static final BigDecimal DEFAULT_ABSENT_DEDUCTION      = new BigDecimal("100000");
+    private static final BigDecimal DEFAULT_LATE_DEDUCTION        = new BigDecimal("25000");
+    private static final BigDecimal DEFAULT_OVERTIME_OCCURRENCE   = new BigDecimal("50000");
+    private static final BigDecimal DEFAULT_OVERTIME_HOUR         = new BigDecimal("25000");
 
     private final PayrollSettingRepository repository;
 
@@ -38,6 +46,10 @@ public class PayrollSettingService {
                 "Potongan per hari untuk karyawan yang tidak hadir (ABSENT)");
         seedIfAbsent(KEY_LATE_DEDUCTION, DEFAULT_LATE_DEDUCTION,
                 "Potongan per hari untuk karyawan yang terlambat (LATE)");
+        seedIfAbsent(KEY_OVERTIME_RATE_OCCURRENCE, DEFAULT_OVERTIME_OCCURRENCE,
+                "Rate lembur per sesi (Rp) — ditambahkan flat setiap kali ada lembur");
+        seedIfAbsent(KEY_OVERTIME_RATE_HOUR, DEFAULT_OVERTIME_HOUR,
+                "Rate lembur per jam (Rp) — ditambahkan berdasarkan total jam lembur");
         log.info("PayrollSetting defaults seeded.");
     }
 
@@ -56,19 +68,19 @@ public class PayrollSettingService {
 
     @Transactional(readOnly = true)
     public PayrollSettingResponse getSettings() {
-        BigDecimal absent = getValue(KEY_ABSENT_DEDUCTION, DEFAULT_ABSENT_DEDUCTION);
-        BigDecimal late   = getValue(KEY_LATE_DEDUCTION,   DEFAULT_LATE_DEDUCTION);
+        BigDecimal absent             = getValue(KEY_ABSENT_DEDUCTION,       DEFAULT_ABSENT_DEDUCTION);
+        BigDecimal late               = getValue(KEY_LATE_DEDUCTION,         DEFAULT_LATE_DEDUCTION);
+        BigDecimal overtimeOccurrence = getValue(KEY_OVERTIME_RATE_OCCURRENCE, DEFAULT_OVERTIME_OCCURRENCE);
+        BigDecimal overtimeHour       = getValue(KEY_OVERTIME_RATE_HOUR,       DEFAULT_OVERTIME_HOUR);
 
-        // updatedAt = yang paling baru di antara kedua row
+        // updatedAt = yang paling baru di antara semua row settings
         LocalDateTime updatedAt = repository.findAll().stream()
-                .filter(s -> s.getSettingKey().equals(KEY_ABSENT_DEDUCTION)
-                          || s.getSettingKey().equals(KEY_LATE_DEDUCTION))
                 .map(PayrollSetting::getUpdatedAt)
                 .filter(t -> t != null)
                 .max(Comparator.naturalOrder())
                 .orElse(null);
 
-        return new PayrollSettingResponse(absent, late, updatedAt);
+        return new PayrollSettingResponse(absent, late, overtimeOccurrence, overtimeHour, updatedAt);
     }
 
     /**
@@ -86,10 +98,13 @@ public class PayrollSettingService {
 
     @Transactional
     public PayrollSettingResponse updateSettings(PayrollSettingRequest request) {
-        upsert(KEY_ABSENT_DEDUCTION, request.getAbsentDeductionPerDay());
-        upsert(KEY_LATE_DEDUCTION,   request.getLateDeductionPerDay());
-        log.info("PayrollSettings updated: absent={} late={}",
-                request.getAbsentDeductionPerDay(), request.getLateDeductionPerDay());
+        upsert(KEY_ABSENT_DEDUCTION,         request.getAbsentDeductionPerDay());
+        upsert(KEY_LATE_DEDUCTION,           request.getLateDeductionPerDay());
+        upsert(KEY_OVERTIME_RATE_OCCURRENCE, request.getOvertimeRatePerOccurrence());
+        upsert(KEY_OVERTIME_RATE_HOUR,       request.getOvertimeRatePerHour());
+        log.info("PayrollSettings updated: absent={} late={} overtimeOccurrence={} overtimeHour={}",
+                request.getAbsentDeductionPerDay(), request.getLateDeductionPerDay(),
+                request.getOvertimeRatePerOccurrence(), request.getOvertimeRatePerHour());
         return getSettings();
     }
 

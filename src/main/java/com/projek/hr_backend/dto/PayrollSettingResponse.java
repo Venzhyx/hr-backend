@@ -14,5 +14,7 @@ public class PayrollSettingResponse {
 
     private BigDecimal absentDeductionPerDay;
     private BigDecimal lateDeductionPerDay;
+    private BigDecimal overtimeRatePerOccurrence;
+    private BigDecimal overtimeRatePerHour;
     private LocalDateTime updatedAt;
 }

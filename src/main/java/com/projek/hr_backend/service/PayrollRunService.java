@@ -28,8 +28,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PayrollRunService {
 
-    private static final BigDecimal OVERTIME_RATE_PER_HOUR = new BigDecimal("25000");
-
     private final PayrollPeriodRepository           payrollPeriodRepository;
     private final PayslipRepository                 payslipRepository;
     private final PayslipComponentRepository        payslipComponentRepository;
@@ -178,10 +176,24 @@ public class PayrollRunService {
                 .getTotalApprovedHoursByEmployeeAndMonth(
                     employee.getId(), period.getMonth(), period.getYear());
         double totalOvertimeHours = rawOvertimeHours != null
-        ? Math.round(rawOvertimeHours * 100.0) / 100.0
-        : 0.0;
-        BigDecimal overtimePay = OVERTIME_RATE_PER_HOUR
-                .multiply(BigDecimal.valueOf(totalOvertimeHours));
+                ? Math.round(rawOvertimeHours * 100.0) / 100.0
+                : 0.0;
+
+        // Jumlah sesi lembur APPROVED (untuk flat rate per occurrence)
+        long totalOvertimeSessions = overtimeRepository
+                .countApprovedSessionsByEmployeeAndMonth(
+                    employee.getId(), period.getMonth(), period.getYear());
+
+        // Baca rate overtime dari DB
+        BigDecimal overtimeRateOccurrence = payrollSettingService.getValue(
+                PayrollSettingService.KEY_OVERTIME_RATE_OCCURRENCE, new BigDecimal("50000"));
+        BigDecimal overtimeRateHour = payrollSettingService.getValue(
+                PayrollSettingService.KEY_OVERTIME_RATE_HOUR, new BigDecimal("25000"));
+
+        // overtimePay = (flat per sesi × jumlah sesi) + (rate per jam × total jam)
+        BigDecimal overtimePay = overtimeRateOccurrence
+                .multiply(BigDecimal.valueOf(totalOvertimeSessions))
+                .add(overtimeRateHour.multiply(BigDecimal.valueOf(totalOvertimeHours)));
 
         long absentCount = attendanceRepository.countByEmployeeIdAndStatusAndDateBetween(
                 employee.getId(), "ABSENT", startDate, endDate);
@@ -239,7 +251,8 @@ public class PayrollRunService {
 
         if (overtimePay.compareTo(BigDecimal.ZERO) > 0) {
             components.add(buildComponent(payslip,
-                "Overtime Pay (" + String.format("%.1f", totalOvertimeHours) + " hrs)",
+                "Overtime Pay (" + totalOvertimeSessions + " session(s), "
+                    + String.format("%.1f", totalOvertimeHours) + " hrs)",
                 PayslipComponentType.EARNING,
                 overtimePay));
         }
