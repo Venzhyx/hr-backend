@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/payroll/employee-salary/**").hasRole("ADMIN")
                 .requestMatchers("/api/departments/**").hasRole("ADMIN")
                 .requestMatchers("/api/companies/**").hasRole("ADMIN")
+                .requestMatchers("/api/users/**").hasRole("ADMIN")
 
                 // ── Semua endpoint lain butuh login (ADMIN atau EMPLOYEE) ──
                 .anyRequest().authenticated()
