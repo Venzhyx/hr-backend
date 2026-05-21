@@ -46,6 +46,8 @@ public class SecurityConfig {
                 // Static files (foto upload)
                 .requestMatchers("/uploads/**").permitAll()
 
+                .requestMatchers("/api/files/**").permitAll()
+
                 // ── ADMIN only ────────────────────────────────────────────
                 .requestMatchers(HttpMethod.POST,   "/api/payroll/run").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/payroll/runs").hasRole("ADMIN")
