@@ -10,6 +10,7 @@ public class TimeoffApprovalResponse {
     private Long timeOffRequestId;
     private Long approverId;
     private String approverName;
+    private Integer sequence;
     private ApprovalStatus status;
     private String notes;
     private LocalDateTime actionAt;

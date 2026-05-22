@@ -16,6 +16,7 @@ public class ReimbursementApprovalResponse {
     private String reimbursementTitle;
     private Long approverId;
     private String approverName;
+    private Integer sequence;
     private ApprovalStatus status;
     private String notes;
     private LocalDateTime approvedAt;

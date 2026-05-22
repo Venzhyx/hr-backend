@@ -10,5 +10,8 @@ import java.util.List;
 public interface TimeOffApprovalRepository extends JpaRepository<TimeOffApproval, Long> {
 
     List<TimeOffApproval> findByTimeOffRequestId(Long timeOffRequestId);
+
+    List<TimeOffApproval> findByTimeOffRequestIdOrderBySequenceAsc(Long timeOffRequestId);
+
     void deleteByTimeOffRequestId(Long timeOffRequestId);
 }

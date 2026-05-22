@@ -23,9 +23,13 @@ public class TimeOffApproval {
     @JoinColumn(name = "time_off_request_id", nullable = false)
     private TimeOffRequest timeOffRequest;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "approver_id", nullable = false)
-    private Employee approver;
+    /** Raw ID — konsisten dengan AttendanceCorrectionApproval & OvertimeApproval. */
+    @Column(name = "approver_id", nullable = false)
+    private Long approverId;
+
+    /** Urutan approval — dipakai frontend untuk processApprovalByLevel. */
+    @Column(nullable = false)
+    private Integer sequence;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

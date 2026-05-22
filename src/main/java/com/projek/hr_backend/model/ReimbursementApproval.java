@@ -14,29 +14,33 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReimbursementApproval {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reimbursement_id", nullable = false)
     private Reimbursement reimbursement;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "approver_id", nullable = false)
-    private Employee approver;
-    
+
+    /** Raw ID — konsisten dengan AttendanceCorrectionApproval & OvertimeApproval. */
+    @Column(name = "approver_id", nullable = false)
+    private Long approverId;
+
+    /** Urutan approval — dipakai frontend untuk processApprovalByLevel. */
+    @Column(nullable = false)
+    private Integer sequence;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ApprovalStatus status = ApprovalStatus.PENDING;
-    
+
     @Column(columnDefinition = "TEXT")
     private String notes;
-    
+
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
-    
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

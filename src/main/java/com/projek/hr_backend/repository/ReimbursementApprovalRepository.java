@@ -9,8 +9,14 @@ import java.util.List;
 
 @Repository
 public interface ReimbursementApprovalRepository extends JpaRepository<ReimbursementApproval, Long> {
+
     List<ReimbursementApproval> findByReimbursementId(Long reimbursementId);
+
+    List<ReimbursementApproval> findByReimbursementIdOrderBySequenceAsc(Long reimbursementId);
+
     long countByReimbursementIdAndStatus(Long reimbursementId, ApprovalStatus status);
+
     List<ReimbursementApproval> findByApproverId(Long approverId);
+
     void deleteByReimbursementId(Long reimbursementId);
 }

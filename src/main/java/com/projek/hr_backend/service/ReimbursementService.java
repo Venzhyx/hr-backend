@@ -52,11 +52,12 @@ public class ReimbursementService {
     private void createApprovalRecords(Reimbursement reimbursement) {
         List<ApprovalApprover> approvers = approvalApproverRepository
                 .findAllByOrderByApprovalOrderAsc();
-        
-        for (ApprovalApprover approver : approvers) {
+
+        for (int i = 0; i < approvers.size(); i++) {
             ReimbursementApproval approval = new ReimbursementApproval();
             approval.setReimbursement(reimbursement);
-            approval.setApprover(approver.getEmployee());
+            approval.setApproverId(approvers.get(i).getEmployee().getId());
+            approval.setSequence(i + 1);
             approval.setStatus(ApprovalStatus.PENDING);
             reimbursementApprovalRepository.save(approval);
         }

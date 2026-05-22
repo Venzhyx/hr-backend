@@ -80,10 +80,12 @@ public class TimeOffRequestService {
         // =========================
         List<TimeOffApproval> approvals = new ArrayList<>();
 
-        for (ApprovalApprover ap : approvers) {
+        for (int i = 0; i < approvers.size(); i++) {
+            ApprovalApprover ap = approvers.get(i);
             TimeOffApproval ta = new TimeOffApproval();
             ta.setTimeOffRequest(saved);
-            ta.setApprover(ap.getEmployee());
+            ta.setApproverId(ap.getEmployee().getId());
+            ta.setSequence(i + 1);
             ta.setStatus(ApprovalStatus.PENDING);
             ta.setNotes(null);
             ta.setActionAt(null);
