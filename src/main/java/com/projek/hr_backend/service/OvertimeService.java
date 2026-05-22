@@ -111,34 +111,32 @@ public class OvertimeService {
         List<OvertimeApproval> approvals =
                 approvalRepository.findByOvertimeIdOrderBySequenceAsc(overtimeId);
 
-        // DEMO MODE: Take first PENDING approval (no approverId check)
+        // Cek apakah approverId yang login adalah giliran berikutnya
         OvertimeApproval myApproval = approvals.stream()
-                .filter(a -> a.getStatus().equals(ApprovalStatus.PENDING))
+                .filter(a -> a.getStatus().equals(ApprovalStatus.PENDING)
+                          && a.getApproverId().equals(approverId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Semua approval sudah selesai"));
+                .orElseThrow(() -> new IllegalStateException(
+                    "Anda bukan approver yang giliran approve untuk overtime ini"));
 
-        // Save notes if provided
         if (notes != null && !notes.isEmpty()) {
             myApproval.setNotes(notes);
         }
-        
+
         myApproval.setStatus(ApprovalStatus.APPROVED);
         myApproval.setApprovedAt(LocalDateTime.now());
         approvalRepository.save(myApproval);
 
-        System.out.println("[OVERTIME APPROVED] ID: " + overtimeId + " Sequence: " + myApproval.getSequence());
-
         // Check if ALL approvals are now APPROVED
-        List<OvertimeApproval> updatedApprovals = 
+        List<OvertimeApproval> updatedApprovals =
                 approvalRepository.findByOvertimeIdOrderBySequenceAsc(overtimeId);
-                
+
         boolean allApproved = updatedApprovals.stream()
                 .allMatch(a -> a.getStatus().equals(ApprovalStatus.APPROVED));
 
         if (allApproved) {
             overtime.setStatus(ApprovalStatus.APPROVED);
             overtimeRepository.save(overtime);
-            System.out.println("[OVERTIME FINAL APPROVED] ID: " + overtimeId);
         }
 
         return mapToResponse(overtime);
@@ -153,20 +151,21 @@ public class OvertimeService {
             throw new IllegalStateException("Overtime sudah diproses");
         }
 
-        List<OvertimeApproval> approvals =
-                approvalRepository.findByOvertimeIdOrderBySequenceAsc(overtimeId);
-
-        // DEMO MODE: Take first PENDING approval
-        OvertimeApproval myApproval = approvals.stream()
-                .filter(a -> a.getStatus().equals(ApprovalStatus.PENDING))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Semua approval sudah selesai"));
-
-        // Notes are required for rejection
         if (notes == null || notes.isEmpty()) {
             throw new IllegalArgumentException("Alasan penolakan wajib diisi");
         }
-        
+
+        List<OvertimeApproval> approvals =
+                approvalRepository.findByOvertimeIdOrderBySequenceAsc(overtimeId);
+
+        // Cek apakah approverId yang login adalah giliran berikutnya
+        OvertimeApproval myApproval = approvals.stream()
+                .filter(a -> a.getStatus().equals(ApprovalStatus.PENDING)
+                          && a.getApproverId().equals(approverId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                    "Anda bukan approver yang giliran reject untuk overtime ini"));
+
         myApproval.setNotes(notes);
         myApproval.setStatus(ApprovalStatus.REJECTED);
         myApproval.setApprovedAt(LocalDateTime.now());
@@ -174,8 +173,6 @@ public class OvertimeService {
 
         overtime.setStatus(ApprovalStatus.REJECTED);
         overtimeRepository.save(overtime);
-
-        System.out.println("[OVERTIME REJECTED] ID: " + overtimeId);
 
         return mapToResponse(overtime);
     }

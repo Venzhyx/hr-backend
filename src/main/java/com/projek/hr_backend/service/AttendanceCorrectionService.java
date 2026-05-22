@@ -96,32 +96,30 @@ public class AttendanceCorrectionService {
         List<AttendanceCorrectionApproval> approvals =
                 approvalRepository.findByCorrectionIdOrderBySequenceAsc(correctionId);
 
-        // Take first PENDING approval (DEMO MODE)
+        // Cek apakah approverId yang login adalah giliran berikutnya
         AttendanceCorrectionApproval myApproval = approvals.stream()
-                .filter(a -> a.getStatus().equals(ApprovalStatus.PENDING))
+                .filter(a -> a.getStatus().equals(ApprovalStatus.PENDING)
+                          && a.getApproverId().equals(approverId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Semua approval sudah selesai"));
+                .orElseThrow(() -> new IllegalStateException(
+                    "Anda bukan approver yang giliran approve untuk correction ini"));
 
-        // Save notes
         if (notes != null && !notes.isEmpty()) {
             myApproval.setNotes(notes);
         }
-        
+
         myApproval.setStatus(ApprovalStatus.APPROVED);
         myApproval.setApprovedAt(LocalDateTime.now());
         approvalRepository.save(myApproval);
 
-        System.out.println("[APPROVED] Correction: " + correctionId + " Sequence: " + myApproval.getSequence());
-
         // Check if ALL approvals are now APPROVED
-        List<AttendanceCorrectionApproval> updatedApprovals = 
+        List<AttendanceCorrectionApproval> updatedApprovals =
                 approvalRepository.findByCorrectionIdOrderBySequenceAsc(correctionId);
-                
+
         boolean allApproved = updatedApprovals.stream()
                 .allMatch(a -> a.getStatus().equals(ApprovalStatus.APPROVED));
 
         if (allApproved) {
-            // Update attendance
             Attendance attendance = attendanceRepository
                     .findByEmployeeIdAndDate(correction.getEmployee().getId(), correction.getDate())
                     .orElseThrow(() -> new ResourceNotFoundException("Attendance tidak ditemukan"));
@@ -139,8 +137,6 @@ public class AttendanceCorrectionService {
 
             correction.setStatus("APPROVED");
             correctionRepository.save(correction);
-
-            System.out.println("[FINAL APPROVED] Correction: " + correctionId);
         }
 
         return mapToResponse(correction);
@@ -155,20 +151,21 @@ public class AttendanceCorrectionService {
             throw new IllegalStateException("Correction sudah diproses");
         }
 
-        List<AttendanceCorrectionApproval> approvals =
-                approvalRepository.findByCorrectionIdOrderBySequenceAsc(correctionId);
-
-        // Take first PENDING approval (DEMO MODE)
-        AttendanceCorrectionApproval myApproval = approvals.stream()
-                .filter(a -> a.getStatus().equals(ApprovalStatus.PENDING))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Semua approval sudah selesai"));
-
-        // Save notes (required)
         if (notes == null || notes.isEmpty()) {
             throw new IllegalArgumentException("Alasan penolakan wajib diisi");
         }
-        
+
+        List<AttendanceCorrectionApproval> approvals =
+                approvalRepository.findByCorrectionIdOrderBySequenceAsc(correctionId);
+
+        // Cek apakah approverId yang login adalah giliran berikutnya
+        AttendanceCorrectionApproval myApproval = approvals.stream()
+                .filter(a -> a.getStatus().equals(ApprovalStatus.PENDING)
+                          && a.getApproverId().equals(approverId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                    "Anda bukan approver yang giliran reject untuk correction ini"));
+
         myApproval.setNotes(notes);
         myApproval.setStatus(ApprovalStatus.REJECTED);
         myApproval.setApprovedAt(LocalDateTime.now());
@@ -176,8 +173,6 @@ public class AttendanceCorrectionService {
 
         correction.setStatus("REJECTED");
         correctionRepository.save(correction);
-
-        System.out.println("[REJECTED] Correction: " + correctionId);
 
         return mapToResponse(correction);
     }

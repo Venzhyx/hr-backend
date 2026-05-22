@@ -59,15 +59,22 @@ public class ApprovalApproverService {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
-        // Validasi: hanya user ber-role ADMIN yang bisa dijadikan approver
+        // Validasi: employee harus punya user account dengan role ADMIN
         userRepository.findByEmployeeId(request.getEmployeeId())
-                .ifPresent(user -> {
-                    if (user.getRole() != Role.ADMIN) {
+                .ifPresentOrElse(
+                    user -> {
+                        if (user.getRole() != Role.ADMIN) {
+                            throw new IllegalArgumentException(
+                                "Hanya user dengan role ADMIN yang bisa dijadikan approver. " +
+                                "Employee ini ber-role: " + user.getRole().name());
+                        }
+                    },
+                    () -> {
                         throw new IllegalArgumentException(
-                            "Hanya user dengan role ADMIN yang bisa dijadikan approver. " +
-                            "Employee ini ber-role: " + user.getRole().name());
+                            "Employee ini belum memiliki user account. " +
+                            "Buat user account dengan role ADMIN terlebih dahulu.");
                     }
-                });
+                );
 
         ApprovalApprover approver = new ApprovalApprover();
         approver.setEmployee(employee);
