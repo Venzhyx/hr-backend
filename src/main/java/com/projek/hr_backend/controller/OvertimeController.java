@@ -3,11 +3,13 @@ package com.projek.hr_backend.controller;
 import com.projek.hr_backend.dto.ApiResponse;
 import com.projek.hr_backend.dto.OvertimeRequest;
 import com.projek.hr_backend.dto.OvertimeResponse;
+import com.projek.hr_backend.model.User;
 import com.projek.hr_backend.service.OvertimeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,12 +53,17 @@ public class OvertimeController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Total overtime hours retrieved", total));
     }
 
+    /**
+     * approverId diambil dari JWT — bukan dari request param.
+     * User yang login harus punya employeeId (role EMPLOYEE/ADMIN yang terdaftar sebagai approver).
+     */
     @PutMapping("/{id}/approve")
     public ResponseEntity<ApiResponse<OvertimeResponse>> approveOvertime(
             @PathVariable Long id,
-            @RequestParam Long approverId,
+            @AuthenticationPrincipal User principal,
             @RequestBody(required = false) Map<String, String> body) {
 
+        Long approverId = resolveEmployeeId(principal);
         String notes = body != null ? body.get("notes") : null;
         OvertimeResponse response = service.approveOvertime(id, approverId, notes);
         return ResponseEntity.ok(new ApiResponse<>(true, "Overtime approved", response));
@@ -65,15 +72,15 @@ public class OvertimeController {
     @PutMapping("/{id}/reject")
     public ResponseEntity<ApiResponse<OvertimeResponse>> rejectOvertime(
             @PathVariable Long id,
-            @RequestParam Long approverId,
+            @AuthenticationPrincipal User principal,
             @RequestBody Map<String, String> body) {
 
+        Long approverId = resolveEmployeeId(principal);
         String notes = body.get("notes");
         OvertimeResponse response = service.rejectOvertime(id, approverId, notes);
         return ResponseEntity.ok(new ApiResponse<>(true, "Overtime rejected", response));
     }
 
-    // ✅ TAMBAHKAN INI - UPDATE Overtime
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<OvertimeResponse>> updateOvertime(
             @PathVariable Long id,
@@ -82,10 +89,18 @@ public class OvertimeController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Overtime updated successfully", response));
     }
 
-    // ✅ TAMBAHKAN INI - DELETE Overtime
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteOvertime(@PathVariable Long id) {
         service.deleteOvertime(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Overtime deleted successfully", null));
+    }
+
+    // ─── Helper ───────────────────────────────────────────────────────────────
+
+    private Long resolveEmployeeId(User principal) {
+        if (principal.getEmployeeId() != null) {
+            return principal.getEmployeeId();
+        }
+        return principal.getId();
     }
 }
