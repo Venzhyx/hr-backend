@@ -2,8 +2,10 @@ package com.projek.hr_backend.service;
 
 import com.projek.hr_backend.dto.AuthRequest;
 import com.projek.hr_backend.dto.AuthResponse;
+import com.projek.hr_backend.dto.PasswordResetResponse;
 import com.projek.hr_backend.dto.RegisterRequest;
 import com.projek.hr_backend.exception.BadRequestException;
+import com.projek.hr_backend.exception.ResourceNotFoundException;
 import com.projek.hr_backend.model.Role;
 import com.projek.hr_backend.model.User;
 import com.projek.hr_backend.repository.EmployeeRepository;
@@ -16,6 +18,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.security.SecureRandom;
 
 @Slf4j
 @Service
@@ -85,7 +89,51 @@ public class AuthService {
         return buildResponse(user, token);
     }
 
+    // ─── Reset Own Password ───────────────────────────────────────────────────
+
+    /**
+     * Generate password baru secara acak untuk user yang sedang login.
+     * userId diambil dari JWT (via @AuthenticationPrincipal di controller),
+     * bukan dari request body — user A tidak bisa reset password user B.
+     *
+     * Password baru dikembalikan sekali dalam plaintext ke FE.
+     * DB hanya menyimpan hash-nya.
+     */
+    @Transactional
+    public PasswordResetResponse resetOwnPassword(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "User tidak ditemukan dengan id: " + userId));
+
+        // Generate 6 karakter acak — huruf besar, huruf kecil, angka
+        String newPassword = generateSecurePassword(6);
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        log.info("Password reset for user: {} (id={})", user.getUsername(), userId);
+
+        return PasswordResetResponse.builder()
+                .success(true)
+                .message("Password berhasil direset. Simpan password baru ini — tidak akan ditampilkan lagi.")
+                .newPassword(newPassword)
+                .build();
+    }
+
     // ─── Helper ───────────────────────────────────────────────────────────────
+
+    private static final String PASSWORD_CHARS =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    private String generateSecurePassword(int length) {
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(PASSWORD_CHARS.charAt(
+                SECURE_RANDOM.nextInt(PASSWORD_CHARS.length())));
+        }
+        return sb.toString();
+    }
 
     private AuthResponse buildResponse(User user, String token) {
         return AuthResponse.builder()
