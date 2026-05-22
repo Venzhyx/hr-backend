@@ -34,9 +34,17 @@ public class TimeOffApprovalService {
 
     // ── PATCH: approve atau reject ───────────────────────────────────────────
     @Transactional
-    public void approveOrReject(Long approvalId, TimeOffApprovalRequest request) {
+    public void approveOrReject(Long approvalId, TimeOffApprovalRequest request,
+                                Long actorEmployeeId) {
         TimeOffApproval approval = timeOffApprovalRepository.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval record not found"));
+
+        // Validasi: hanya approver yang ditugaskan yang boleh aksi
+        if (!approval.getApprover().getId().equals(actorEmployeeId)) {
+            throw new IllegalStateException(
+                "Anda tidak berhak melakukan aksi pada approval ini. " +
+                "Approval ini ditugaskan ke approver lain.");
+        }
 
         if (approval.getStatus() != ApprovalStatus.PENDING) {
             throw new IllegalStateException("Approval sudah diproses sebelumnya.");

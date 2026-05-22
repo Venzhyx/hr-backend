@@ -46,7 +46,8 @@ public class ReimbursementApprovalService {
     }
 
     @Transactional
-    public void approveOrRejectApproval(Long approvalId, ReimbursementApprovalRequest request) {
+    public void approveOrRejectApproval(Long approvalId, ReimbursementApprovalRequest request,
+                                        Long actorEmployeeId) {
         String action = request.getAction().toUpperCase();
         if (!action.equals("APPROVED") && !action.equals("REJECTED")) {
             throw new IllegalArgumentException("Invalid action. Must be APPROVED or REJECTED");
@@ -54,6 +55,17 @@ public class ReimbursementApprovalService {
 
         ReimbursementApproval approval = approvalRepository.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval not found with id: " + approvalId));
+
+        // Validasi: hanya approver yang ditugaskan yang boleh aksi
+        if (!approval.getApprover().getId().equals(actorEmployeeId)) {
+            throw new IllegalStateException(
+                "Anda tidak berhak melakukan aksi pada approval ini. " +
+                "Approval ini ditugaskan ke approver lain.");
+        }
+
+        if (approval.getStatus() != ApprovalStatus.PENDING) {
+            throw new IllegalStateException("Approval sudah diproses sebelumnya.");
+        }
 
         ApprovalStatus status = ApprovalStatus.valueOf(action);
         approval.setStatus(status);

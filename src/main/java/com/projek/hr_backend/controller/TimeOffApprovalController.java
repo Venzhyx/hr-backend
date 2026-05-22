@@ -3,10 +3,12 @@ package com.projek.hr_backend.controller;
 import com.projek.hr_backend.dto.ApiResponse;
 import com.projek.hr_backend.dto.TimeOffApprovalRequest;
 import com.projek.hr_backend.dto.TimeoffApprovalResponse;
+import com.projek.hr_backend.model.User;
 import com.projek.hr_backend.service.TimeOffApprovalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +20,6 @@ public class TimeOffApprovalController {
 
     private final TimeOffApprovalService service;
 
-    // GET /api/time-off-approvals/request/{requestId}
     @GetMapping("/request/{requestId}")
     public ResponseEntity<ApiResponse<List<TimeoffApprovalResponse>>> getByRequest(
             @PathVariable Long requestId) {
@@ -26,13 +27,26 @@ public class TimeOffApprovalController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Approvals retrieved successfully", approvals));
     }
 
-    // PATCH /api/time-off-approvals/{id}
-    // body: { "action": "APPROVED" | "REJECTED", "notes": "..." }
+    /**
+     * approverId diambil dari JWT — bukan dari request body.
+     * Service akan validasi bahwa user yang login adalah approver yang berhak
+     * untuk approval record ini.
+     */
     @PatchMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> approveOrReject(
             @PathVariable Long id,
+            @AuthenticationPrincipal User principal,
             @Valid @RequestBody TimeOffApprovalRequest request) {
-        service.approveOrReject(id, request);
+        Long actorEmployeeId = resolveEmployeeId(principal);
+        service.approveOrReject(id, request, actorEmployeeId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Approval updated successfully", null));
+    }
+
+    // ─── Helper ───────────────────────────────────────────────────────────────
+
+    private Long resolveEmployeeId(User principal) {
+        return principal.getEmployeeId() != null
+                ? principal.getEmployeeId()
+                : principal.getId();
     }
 }
